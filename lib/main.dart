@@ -1,10 +1,10 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'services/mqtt_service.dart';
-import 'screens/dashboard_screen.dart';
+import 'core/constants/app_constants.dart';
+import 'providers/incubator_provider.dart';
+import 'providers/history_provider.dart';
+import 'presentation/screens/dashboard_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,20 +23,15 @@ class IncubatorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      // Auto-connect saat aplikasi dibuka
-      create: (_) => MqttService()..connect(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => IncubatorProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()),
+      ],
       child: MaterialApp(
         title: 'Inkubator Monitor',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF4ECDC4),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          fontFamily: 'sans-serif',
-        ),
+        theme: AppTheme.darkTheme,
         home: const DashboardScreen(),
       ),
     );
