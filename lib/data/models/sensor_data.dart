@@ -1,4 +1,3 @@
-import '../../core/constants/app_constants.dart';
 
 class SensorData {
   final double temperature;
@@ -31,32 +30,35 @@ class SensorData {
     );
   }
 
-  String get tempStatus {
-    if (temperature >= AppThresholds.minTemp &&
-        temperature <= AppThresholds.maxTemp) {
+  String tempStatus(double minTemp, double maxTemp) {
+    if (temperature >= minTemp &&
+        temperature <= maxTemp) {
       return 'Optimal';
     }
-    if (temperature < AppThresholds.minTemp) {
+    if (temperature < minTemp) {
       return 'Terlalu Dingin';
     }
     return 'Terlalu Panas';
   }
 
-  String get humidityStatus {
-    if (humidity >= AppThresholds.minHumid &&
-        humidity <= AppThresholds.maxHumid) {
+  String humidityStatus(double minHumid, double maxHumid) {
+    if (humidity >= minHumid &&
+        humidity <= maxHumid) {
       return 'Optimal';
     }
-    if (humidity < AppThresholds.minHumid) {
+    if (humidity < minHumid) {
       return 'Terlalu Kering';
     }
     return 'Terlalu Lembap';
   }
 
-  bool get isTempAlert =>
-      temperature < AppThresholds.minTemp ||
-      temperature > AppThresholds.maxTemp;
-  bool get isHumidAlert =>
-      humidity < AppThresholds.minHumid || humidity > AppThresholds.maxHumid;
-  bool get hasAlert => isTempAlert || isHumidAlert;
+  bool isTempAlert(double minTemp, double maxTemp) =>
+      temperature < minTemp ||
+      temperature > maxTemp;
+
+  bool isHumidAlert(double minHumid, double maxHumid) =>
+      humidity < minHumid || humidity > maxHumid;
+
+  bool hasAlert(double minTemp, double maxTemp, double minHumid, double maxHumid) =>
+      isTempAlert(minTemp, maxTemp) || isHumidAlert(minHumid, maxHumid);
 }

@@ -24,13 +24,7 @@ class AppColors {
   static const Color danger = Color(0xFFEF4444);
 }
 
-class AppThresholds {
-  // Chicken Egg Incubation Thresholds (Standard)
-  static const double minTemp = 37.0;
-  static const double maxTemp = 38.5;
-  static const double minHumid = 60.0;
-  static const double maxHumid = 70.0;
-}
+
 
 class AppTheme {
   static ThemeData get darkTheme {

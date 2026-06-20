@@ -43,6 +43,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showThresholdSettingsSheet(BuildContext context, IncubatorProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: FractionallySizedBox(
+          heightFactor: 0.6,
+          child: _ThresholdSettingsForm(provider: provider),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,6 +91,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune_rounded, color: AppColors.textPrimary),
+            onPressed: () => _showThresholdSettingsSheet(context, context.read<IncubatorProvider>()),
+          ),
           Consumer<IncubatorProvider>(
             builder: (context, provider, _) {
               final alarmCount = provider.alarms.length;
@@ -199,7 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics()),
               slivers: [
-                if (data != null && data.hasAlert)
+                if (data != null && data.hasAlert(provider.minTemp, provider.maxTemp, provider.minHumid, provider.maxHumid))
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -219,9 +240,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Expanded(
                               child: Text(
                                 [
-                                  if (data.isTempAlert)
+                                  if (data.isTempAlert(provider.minTemp, provider.maxTemp))
                                     'Suhu (${data.temperature.toStringAsFixed(1)}°C) keluar batas optimal.',
-                                  if (data.isHumidAlert)
+                                  if (data.isHumidAlert(provider.minHumid, provider.maxHumid))
                                     'Kelembapan (${data.humidity.toStringAsFixed(1)}%) keluar batas optimal.',
                                 ].join(' '),
                                 style: const TextStyle(
@@ -270,6 +291,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       InsightCard(
                         latestData: data,
                         incubationDay: provider.incubationDay,
+                        minTemp: provider.minTemp,
+                        maxTemp: provider.maxTemp,
+                        minHumid: provider.minHumid,
+                        maxHumid: provider.maxHumid,
                       ),
                       const SizedBox(height: 16),
                       const HistoricalChart(),
@@ -310,8 +335,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: '°C',
                 icon: Icons.thermostat_rounded,
                 color: AppColors.tempAccent,
-                status: data?.tempStatus,
-                isAlert: data?.isTempAlert ?? false,
+                status: data?.tempStatus(provider.minTemp, provider.maxTemp),
+                isAlert: data?.isTempAlert(provider.minTemp, provider.maxTemp) ?? false,
                 sparklinePoints: tempHistory,
               ),
             ),
@@ -323,8 +348,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 unit: '%',
                 icon: Icons.water_drop_rounded,
                 color: AppColors.humidAccent,
-                status: data?.humidityStatus,
-                isAlert: data?.isHumidAlert ?? false,
+                status: data?.humidityStatus(provider.minHumid, provider.maxHumid),
+                isAlert: data?.isHumidAlert(provider.minHumid, provider.maxHumid) ?? false,
                 sparklinePoints: humidHistory,
               ),
             ),
@@ -383,6 +408,291 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _ThresholdSettingsForm extends StatefulWidget {
+  final IncubatorProvider provider;
+
+  const _ThresholdSettingsForm({required this.provider});
+
+  @override
+  State<_ThresholdSettingsForm> createState() => _ThresholdSettingsFormState();
+}
+
+class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _minTempController;
+  late TextEditingController _maxTempController;
+  late TextEditingController _minHumidController;
+  late TextEditingController _maxHumidController;
+
+  @override
+  void initState() {
+    super.initState();
+    _minTempController = TextEditingController(text: widget.provider.minTemp.toString());
+    _maxTempController = TextEditingController(text: widget.provider.maxTemp.toString());
+    _minHumidController = TextEditingController(text: widget.provider.minHumid.toString());
+    _maxHumidController = TextEditingController(text: widget.provider.maxHumid.toString());
+  }
+
+  @override
+  void dispose() {
+    _minTempController.dispose();
+    _maxTempController.dispose();
+    _minHumidController.dispose();
+    _maxHumidController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (_formKey.currentState!.validate()) {
+      final minT = double.parse(_minTempController.text);
+      final maxT = double.parse(_maxTempController.text);
+      final minH = double.parse(_minHumidController.text);
+      final maxH = double.parse(_maxHumidController.text);
+
+      widget.provider.updateThresholds(minT, maxT, minH, maxH);
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.success),
+              SizedBox(width: 8),
+              Text('Ambang batas berhasil diperbarui!'),
+            ],
+          ),
+          backgroundColor: AppColors.surfaceElevated,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 1.5),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.tune_rounded, color: AppColors.humidAccent),
+                SizedBox(width: 10),
+                Text(
+                  'Pengaturan Ambang Batas',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Sesuaikan batas aman suhu (°C) dan kelembapan (%) untuk inkubator.',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildSectionHeader('Suhu (°C)', Icons.thermostat_rounded, AppColors.tempAccent),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildInputField(
+                            label: 'Min Suhu',
+                            controller: _minTempController,
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Wajib diisi';
+                              final numVal = double.tryParse(val);
+                              if (numVal == null) return 'Harus angka';
+                              if (numVal < 0 || numVal > 100) return '0 - 100';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildInputField(
+                            label: 'Max Suhu',
+                            controller: _maxTempController,
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Wajib diisi';
+                              final numVal = double.tryParse(val);
+                              if (numVal == null) return 'Harus angka';
+                              final minVal = double.tryParse(_minTempController.text);
+                              if (minVal != null && numVal <= minVal) {
+                                return 'Batas max harus > min';
+                              }
+                              if (numVal < 0 || numVal > 100) return '0 - 100';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Kelembapan (%)', Icons.water_drop_rounded, AppColors.humidAccent),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildInputField(
+                            label: 'Min Lembap',
+                            controller: _minHumidController,
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Wajib diisi';
+                              final numVal = double.tryParse(val);
+                              if (numVal == null) return 'Harus angka';
+                              if (numVal < 0 || numVal > 100) return '0 - 100';
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildInputField(
+                            label: 'Max Lembap',
+                            controller: _maxHumidController,
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Wajib diisi';
+                              final numVal = double.tryParse(val);
+                              if (numVal == null) return 'Harus angka';
+                              final minVal = double.tryParse(_minHumidController.text);
+                              if (minVal != null && numVal <= minVal) {
+                                return 'Batas max harus > min';
+                              }
+                              if (numVal < 0 || numVal > 100) return '0 - 100';
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.humidAccent,
+                foregroundColor: AppColors.background,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Simpan Pengaturan',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        floatingLabelStyle: const TextStyle(color: AppColors.humidAccent, fontSize: 12),
+        fillColor: AppColors.surfaceElevated,
+        filled: true,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.humidAccent, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.danger),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+        ),
+        errorStyle: const TextStyle(color: AppColors.danger, fontSize: 10),
+      ),
     );
   }
 }

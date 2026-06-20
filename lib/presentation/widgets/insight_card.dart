@@ -5,11 +5,19 @@ import '../../data/models/sensor_data.dart';
 class InsightCard extends StatelessWidget {
   final SensorData? latestData;
   final int incubationDay;
+  final double minTemp;
+  final double maxTemp;
+  final double minHumid;
+  final double maxHumid;
 
   const InsightCard({
     super.key,
     required this.latestData,
     required this.incubationDay,
+    required this.minTemp,
+    required this.maxTemp,
+    required this.minHumid,
+    required this.maxHumid,
   });
 
   List<String> _generateInsights() {
@@ -23,10 +31,10 @@ class InsightCard extends StatelessWidget {
     final tempBmp = latestData!.tempBmp;
 
     if (incubationDay <= 18) {
-      if (temp < AppThresholds.minTemp) {
+      if (temp < minTemp) {
         insights.add(
             'Hari ke-$incubationDay: Suhu dingin. Naikkan suhu ruang atau kurangi ventilasi udara agar pemanas bekerja efisien.');
-      } else if (temp > AppThresholds.maxTemp) {
+      } else if (temp > maxTemp) {
         insights.add(
             'Hari ke-$incubationDay: Suhu terlalu hangat. Periksa apakah ventilasi tersumbat atau jika kipas pendingin mengalami kendala.');
       } else {
@@ -34,18 +42,18 @@ class InsightCard extends StatelessWidget {
             'Hari ke-$incubationDay: Kondisi suhu optimal untuk fase inkubasi awal. Pastikan pemutaran telur (turning) aktif setiap 3 jam.');
       }
 
-      if (humid < AppThresholds.minHumid) {
+      if (humid < minHumid) {
         insights.add(
             'Kelembapan rendah ($humid%). Tambahkan air hangat di baki kelembapan inkubator untuk menaikkan kadar kelembapan.');
-      } else if (humid > AppThresholds.maxHumid) {
+      } else if (humid > maxHumid) {
         insights.add(
             'Kelembapan tinggi ($humid%). Buka sedikit ventilasi udara untuk menurunkan penguapan air.');
       }
     } else {
-      final targetMinTemp = 36.8;
-      final targetMaxTemp = 37.8;
-      final targetMinHumid = 70.0;
-      final targetMaxHumid = 80.0;
+      const targetMinTemp = 36.8;
+      const targetMaxTemp = 37.8;
+      const targetMinHumid = 70.0;
+      const targetMaxHumid = 80.0;
 
       insights.add(
           'Fase Hatching (Hari $incubationDay dari 21). Hentikan pemutaran telur (turning) secara manual agar embrio dapat memosisikan diri.');
@@ -55,7 +63,7 @@ class InsightCard extends StatelessWidget {
             'Suhu terlalu rendah untuk fase hatching. Naikkan intensitas pemanas sedikit demi keselamatan embrio.');
       } else if (temp > targetMaxTemp) {
         insights.add(
-            'Suhu agak tinggi untuk fase hatching. Fase menetas memerlukan suhu sedikit lebih sejuk (${targetMinTemp}-${targetMaxTemp}°C).');
+            'Suhu agak tinggi untuk fase hatching. Fase menetas memerlukan suhu sedikit lebih sejuk ($targetMinTemp-$targetMaxTemp°C).');
       }
 
       if (humid < targetMinHumid) {
@@ -139,7 +147,7 @@ class InsightCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         insight,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                           height: 1.4,

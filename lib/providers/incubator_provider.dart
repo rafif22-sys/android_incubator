@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/sensor_data.dart';
 import '../data/models/alarm_log.dart';
@@ -13,6 +14,16 @@ class IncubatorProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _statusMessage = 'Belum terhubung';
   Timer? _pollTimer;
+
+  double _minTemp = 37.0;
+  double _maxTemp = 38.5;
+  double _minHumid = 60.0;
+  double _maxHumid = 70.0;
+
+  double get minTemp => _minTemp;
+  double get maxTemp => _maxTemp;
+  double get minHumid => _minHumid;
+  double get maxHumid => _maxHumid;
 
   final List<SensorData> _recentDataPoints = [];
 
@@ -62,7 +73,7 @@ class IncubatorProvider extends ChangeNotifier {
       return 'Bahaya / Kritis';
     }
 
-    if (_latestData!.hasAlert) {
+    if (_latestData!.hasAlert(_minTemp, _maxTemp, _minHumid, _maxHumid)) {
       return 'Perlu Perhatian';
     }
 
@@ -80,6 +91,38 @@ class IncubatorProvider extends ChangeNotifier {
     };
   }
 
+  Future<void> loadThresholds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _minTemp = prefs.getDouble('min_temp') ?? 37.0;
+      _maxTemp = prefs.getDouble('max_temp') ?? 38.5;
+      _minHumid = prefs.getDouble('min_humid') ?? 60.0;
+      _maxHumid = prefs.getDouble('max_humid') ?? 70.0;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading thresholds: $e');
+    }
+  }
+
+  Future<void> updateThresholds(double minT, double maxT, double minH, double maxH) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('min_temp', minT);
+      await prefs.setDouble('max_temp', maxT);
+      await prefs.setDouble('min_humid', minH);
+      await prefs.setDouble('max_humid', maxH);
+      
+      _minTemp = minT;
+      _maxTemp = maxT;
+      _minHumid = minH;
+      _maxHumid = maxH;
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving thresholds: $e');
+    }
+  }
+
   Future<void> connect() async {
     if (_pollTimer != null) return;
 
@@ -87,6 +130,7 @@ class IncubatorProvider extends ChangeNotifier {
     _statusMessage = 'Menghubungkan ke Ubidots...';
     notifyListeners();
 
+    await loadThresholds();
     await refreshLatest();
 
     _isLoading = false;
@@ -133,22 +177,22 @@ class IncubatorProvider extends ChangeNotifier {
   void _checkAlerts(SensorData data) {
     final now = DateTime.now();
 
-    if (data.isTempAlert) {
-      final String alertType = data.temperature < AppThresholds.minTemp
+    if (data.isTempAlert(_minTemp, _maxTemp)) {
+      final String alertType = data.temperature < _minTemp
           ? 'Suhu Terlalu Dingin'
           : 'Suhu Terlalu Panas';
       final String desc =
-          'Suhu ${data.temperature.toStringAsFixed(1)}°C di luar batas optimal (${AppThresholds.minTemp}-${AppThresholds.maxTemp}°C)';
+          'Suhu ${data.temperature.toStringAsFixed(1)}°C di luar batas optimal (${_minTemp.toStringAsFixed(1)}-${_maxTemp.toStringAsFixed(1)}°C)';
 
       _logAlarmIfNew('temperature', alertType, desc, data.temperature, now);
     }
 
-    if (data.isHumidAlert) {
-      final String alertType = data.humidity < AppThresholds.minHumid
+    if (data.isHumidAlert(_minHumid, _maxHumid)) {
+      final String alertType = data.humidity < _minHumid
           ? 'Kelembapan Kering'
           : 'Kelembapan Basah';
       final String desc =
-          'Kelembapan ${data.humidity.toStringAsFixed(1)}% di luar batas optimal (${AppThresholds.minHumid}-${AppThresholds.maxHumid}%)';
+          'Kelembapan ${data.humidity.toStringAsFixed(1)}% di luar batas optimal (${_minHumid.toStringAsFixed(1)}-${_maxHumid.toStringAsFixed(1)}%)';
 
       _logAlarmIfNew('humidity', alertType, desc, data.humidity, now);
     }
