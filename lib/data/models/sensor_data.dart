@@ -7,7 +7,6 @@ class SensorData {
   final double tempBmp;
   final double pressure;
   final double altitude;
-  final double powerPid;
   final DateTime timestamp;
 
   SensorData({
@@ -17,7 +16,6 @@ class SensorData {
     required this.tempBmp,
     required this.pressure,
     required this.altitude,
-    required this.powerPid,
     required this.timestamp,
   });
 
@@ -29,7 +27,6 @@ class SensorData {
       tempBmp: (json['temp_bmp'] ?? 0.0).toDouble(),
       pressure: (json['pressure'] ?? 0.0).toDouble(),
       altitude: (json['altitude'] ?? 0.0).toDouble(),
-      powerPid: (json['power_pid'] ?? 0.0).toDouble(),
       timestamp: DateTime.now(),
     );
   }

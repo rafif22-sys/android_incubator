@@ -39,7 +39,6 @@ class UbidotsService {
         tempBmp: variableValues['temp_bmp'] ?? 0.0,
         pressure: variableValues['pressure'] ?? 0.0,
         altitude: variableValues['altitude'] ?? 0.0,
-        powerPid: variableValues['power_pid'] ?? 0.0,
         timestamp: DateTime.now(),
       );
     } else {

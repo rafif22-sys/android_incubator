@@ -29,14 +29,6 @@ class IncubatorProvider extends ChangeNotifier {
   List<SensorData> get recentDataPoints => List.unmodifiable(_recentDataPoints);
   DateTime get incubationStartDate => _incubationStartDate;
 
-  double get heaterPower => _latestData?.powerPid ?? 0.0;
-  bool get isHeaterActive => heaterPower > 0.0;
-
-  bool get isFanActive {
-    if (_latestData == null) return false;
-    return _latestData!.temperature > AppThresholds.maxTemp;
-  }
-
   int get incubationDay {
     final diff = DateTime.now().difference(_incubationStartDate);
     final days = diff.inDays + 1;

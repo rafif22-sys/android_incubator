@@ -4,7 +4,6 @@ import '../../core/constants/app_constants.dart';
 import '../../data/models/sensor_data.dart';
 import '../../providers/incubator_provider.dart';
 import '../widgets/egg_progress_ring.dart';
-import '../widgets/actuator_status_bar.dart';
 import '../widgets/premium_sensor_card.dart';
 import '../widgets/insight_card.dart';
 import '../widgets/alarm_log_sheet.dart';
@@ -248,15 +247,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         latestData: data,
                         systemHealth: provider.systemHealth,
                         healthColor: provider.healthColor,
-                      ),
-                      const SizedBox(height: 16),
-                      ActuatorStatusBar(
-                        heaterPower: provider.heaterPower,
-                        isHeaterActive: provider.isHeaterActive,
-                        isFanActive: provider.isFanActive,
-                        isConnected: provider.isConnected,
-                        statusMessage: provider.statusMessage,
-                        onReconnect: provider.connect,
                       ),
                       const SizedBox(height: 16),
                       const Row(

@@ -20,7 +20,6 @@ class InsightCard extends StatelessWidget {
     final insights = <String>[];
     final temp = latestData!.temperature;
     final humid = latestData!.humidity;
-    final power = latestData!.powerPid;
     final tempBmp = latestData!.tempBmp;
 
     if (incubationDay <= 18) {
@@ -66,11 +65,6 @@ class InsightCard extends StatelessWidget {
         insights.add(
             'Kelembapan optimal untuk fase hatching. Menjaga membran cangkang tetap basah.');
       }
-    }
-
-    if (power > 80.0 && temp < AppThresholds.minTemp) {
-      insights.add(
-          'Diagnosis Sistem: Beban pemanas tinggi ($power%), namun suhu tetap rendah. Terdeteksi kebocoran panas masif pada box inkubator!');
     }
 
     final tempDiff = (temp - tempBmp).abs();
