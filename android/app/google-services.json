@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "783198663540",
+    "project_id": "tubes-iot-2026",
+    "storage_bucket": "tubes-iot-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783198663540:android:ff002a2cb2b43a5f667221",
+        "android_client_info": {
+          "package_name": "com.example.android_incubator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUUNjNCCr1e7DUeycfar8QnN8hXqfdjVI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

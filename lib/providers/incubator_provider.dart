@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../data/models/sensor_data.dart';
 import '../data/models/alarm_log.dart';
 import '../data/services/ubidots_service.dart';
+import '../data/services/notification_service.dart';
 
 class IncubatorProvider extends ChangeNotifier {
   final UbidotsService _service = UbidotsService();
@@ -223,6 +224,13 @@ class IncubatorProvider extends ChangeNotifier {
       if (_alarms.length > 50) {
         _alarms.removeAt(0);
       }
+
+      // Tampilkan notifikasi sistem di HP
+      NotificationService().showLocalNotification(
+        id: type.hashCode ^ time.millisecond,
+        title: title,
+        body: desc,
+      );
     }
   }
 

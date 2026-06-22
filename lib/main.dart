@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'core/constants/app_constants.dart';
+import 'data/services/notification_service.dart';
 import 'providers/incubator_provider.dart';
 import 'providers/history_provider.dart';
 import 'presentation/screens/dashboard_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Layanan Notifikasi Lokal
+  await NotificationService().initialize();
+
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
