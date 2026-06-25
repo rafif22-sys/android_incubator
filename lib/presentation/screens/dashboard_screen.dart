@@ -8,6 +8,7 @@ import '../widgets/premium_sensor_card.dart';
 import '../widgets/insight_card.dart';
 import '../widgets/alarm_log_sheet.dart';
 import '../widgets/historical_chart.dart';
+import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -265,7 +266,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         currentDay: provider.incubationDay,
                         percent: provider.incubationPercent,
                         phase: provider.incubationPhase,
-                        latestData: data,
                         systemHealth: provider.systemHealth,
                         healthColor: provider.healthColor,
                       ),
@@ -427,6 +427,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
   late TextEditingController _maxTempController;
   late TextEditingController _minHumidController;
   late TextEditingController _maxHumidController;
+  late DateTime _incubationStartDate;
 
   @override
   void initState() {
@@ -435,6 +436,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
     _maxTempController = TextEditingController(text: widget.provider.maxTemp.toString());
     _minHumidController = TextEditingController(text: widget.provider.minHumid.toString());
     _maxHumidController = TextEditingController(text: widget.provider.maxHumid.toString());
+    _incubationStartDate = widget.provider.incubationStartDate ?? DateTime.now();
   }
 
   @override
@@ -446,6 +448,68 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
     super.dispose();
   }
 
+  int get _calculatedIncubationDay {
+    final diff = DateTime.now().difference(_incubationStartDate);
+    final days = diff.inDays + 1;
+    return days.clamp(1, 21);
+  }
+
+  Future<void> _selectStartDate() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _incubationStartDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 60)),
+      lastDate: DateTime.now().add(const Duration(days: 10)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.humidAccent,
+              onPrimary: AppColors.background,
+              surface: AppColors.surfaceElevated,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (selectedDate == null) return;
+
+    if (!mounted) return;
+
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_incubationStartDate),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.humidAccent,
+              onPrimary: AppColors.background,
+              surface: AppColors.surfaceElevated,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (selectedTime == null) return;
+
+    setState(() {
+      _incubationStartDate = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        selectedTime.hour,
+        selectedTime.minute,
+      );
+    });
+  }
+
   void _save() {
     if (_formKey.currentState!.validate()) {
       final minT = double.parse(_minTempController.text);
@@ -454,6 +518,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
       final maxH = double.parse(_maxHumidController.text);
 
       widget.provider.updateThresholds(minT, maxT, minH, maxH);
+      widget.provider.setIncubationStartDate(_incubationStartDate);
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +527,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
             children: [
               Icon(Icons.check_circle_rounded, color: AppColors.success),
               SizedBox(width: 8),
-              Text('Ambang batas berhasil diperbarui!'),
+              Text('Pengaturan berhasil diperbarui!'),
             ],
           ),
           backgroundColor: AppColors.surfaceElevated,
@@ -508,7 +573,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
                 Icon(Icons.tune_rounded, color: AppColors.humidAccent),
                 SizedBox(width: 10),
                 Text(
-                  'Pengaturan Ambang Batas',
+                  'Pengaturan Sistem',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -519,7 +584,7 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Sesuaikan batas aman suhu (°C) dan kelembapan (%) untuk inkubator.',
+              'Sesuaikan batas aman suhu/kelembapan serta kalender waktu inkubasi.',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
@@ -605,6 +670,105 @@ class _ThresholdSettingsFormState extends State<_ThresholdSettingsForm> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Waktu & Kalender Inkubasi', Icons.calendar_today_rounded, AppColors.success),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Mulai Inkubasi:',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                DateFormat('dd MMM yyyy, HH:mm').format(_incubationStartDate),
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Hari Berjalan:',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'Hari ke-$_calculatedIncubationDay dari 21',
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _selectStartDate,
+                                  icon: const Icon(Icons.edit_calendar_rounded, size: 16),
+                                  label: const Text('Ubah Tanggal', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.humidAccent,
+                                    side: const BorderSide(color: AppColors.border),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _incubationStartDate = DateTime.now();
+                                    });
+                                  },
+                                  icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                                  label: const Text('Reset (Hari 1)', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.danger,
+                                    side: const BorderSide(color: AppColors.border),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

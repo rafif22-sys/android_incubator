@@ -30,8 +30,7 @@ class IncubatorProvider extends ChangeNotifier {
 
   final List<AlarmLog> _alarms = [];
 
-  DateTime _incubationStartDate =
-      DateTime.now().subtract(const Duration(days: 11, hours: 5));
+  DateTime? _incubationStartDate;
 
   SensorData? get latestData => _latestData;
   bool get isConnected => _isConnected;
@@ -39,21 +38,24 @@ class IncubatorProvider extends ChangeNotifier {
   String get statusMessage => _statusMessage;
   List<AlarmLog> get alarms => List.unmodifiable(_alarms);
   List<SensorData> get recentDataPoints => List.unmodifiable(_recentDataPoints);
-  DateTime get incubationStartDate => _incubationStartDate;
+  DateTime? get incubationStartDate => _incubationStartDate;
 
   int get incubationDay {
-    final diff = DateTime.now().difference(_incubationStartDate);
+    if (_incubationStartDate == null) return 0;
+    final diff = DateTime.now().difference(_incubationStartDate!);
     final days = diff.inDays + 1;
     return days.clamp(1, 21);
   }
 
   double get incubationPercent {
-    final diff = DateTime.now().difference(_incubationStartDate);
+    if (_incubationStartDate == null) return 0.0;
+    final diff = DateTime.now().difference(_incubationStartDate!);
     final percent = (diff.inSeconds / (21 * 24 * 3600)) * 100;
     return percent.clamp(0.0, 100.0);
   }
 
   String get incubationPhase {
+    if (_incubationStartDate == null) return 'Inkubator Nonaktif';
     final day = incubationDay;
     if (day >= 1 && day <= 18) {
       return 'Fase Inkubasi (Turning Aktif)';
@@ -92,16 +94,23 @@ class IncubatorProvider extends ChangeNotifier {
     };
   }
 
-  Future<void> loadThresholds() async {
+  Future<void> loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _minTemp = prefs.getDouble('min_temp') ?? 37.0;
       _maxTemp = prefs.getDouble('max_temp') ?? 38.5;
       _minHumid = prefs.getDouble('min_humid') ?? 60.0;
       _maxHumid = prefs.getDouble('max_humid') ?? 70.0;
+
+      final startDateStr = prefs.getString('incubation_start_date');
+      if (startDateStr != null && startDateStr.isNotEmpty) {
+        _incubationStartDate = DateTime.parse(startDateStr);
+      } else {
+        _incubationStartDate = null;
+      }
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading thresholds: $e');
+      debugPrint('Error loading settings: $e');
     }
   }
 
@@ -131,7 +140,7 @@ class IncubatorProvider extends ChangeNotifier {
     _statusMessage = 'Menghubungkan ke Ubidots...';
     notifyListeners();
 
-    await loadThresholds();
+    await loadSettings();
     await refreshLatest();
 
     _isLoading = false;
@@ -170,9 +179,19 @@ class IncubatorProvider extends ChangeNotifier {
     }
   }
 
-  void setIncubationStartDate(DateTime date) {
-    _incubationStartDate = date;
-    notifyListeners();
+  Future<void> setIncubationStartDate(DateTime? date) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (date == null) {
+        await prefs.remove('incubation_start_date');
+      } else {
+        await prefs.setString('incubation_start_date', date.toIso8601String());
+      }
+      _incubationStartDate = date;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving incubation start date: $e');
+    }
   }
 
   void _checkAlerts(SensorData data) {

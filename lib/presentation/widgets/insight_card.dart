@@ -21,6 +21,10 @@ class InsightCard extends StatelessWidget {
   });
 
   List<String> _generateInsights() {
+    if (incubationDay == 0) {
+      return ['Inkubator saat ini tidak aktif. Silakan ketuk tombol progres telur untuk memulai siklus inkubasi.'];
+    }
+
     if (latestData == null) {
       return ['Menghubungkan ke sensor... Mengumpulkan metrik lingkungan.'];
     }
